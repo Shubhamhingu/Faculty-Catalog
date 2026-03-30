@@ -11,15 +11,10 @@ def clean_name(name):
     if pd.isna(name):
         return None
     parts = name.split(',')
-    if len(parts) == 3:
-        last = parts[0].strip()
-        first = parts[1].strip()
-        title = parts[2].strip()
-        return f"{first} {last} {title}"
     if len(parts) == 2:
         last = parts[0].strip()
         rest = parts[1].strip()
-        return f"{rest} {last}"
+        return f"{last} {rest}"
     return name.strip()
 
 df['professor_key'] = (

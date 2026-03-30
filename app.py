@@ -4,7 +4,7 @@ import sqlite3
 import plotly.express as px
 
 # --- CONFIGURATION ---
-DB_FILE = "clean_teachers_1934_new.db"  # Change this to your actual .db filename
+DB_FILE = "streamlit_db.db"  # Change this to your actual .db filename
 
 def run_query(query):
     with sqlite3.connect(DB_FILE) as conn:

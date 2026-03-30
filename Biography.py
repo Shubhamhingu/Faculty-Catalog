@@ -51,7 +51,7 @@ df_long['birth_year'] = pd.to_numeric(df_long['birth_year'], errors='coerce').as
 df_long['degree_year'] = pd.to_numeric(df_long['degree_year'], errors='coerce').astype('Int64')
 # print(df_long.head())
 
-df_long.to_sql('Biography', 'sqlite:///clean_teachers_1934_new.db', if_exists='replace', index=False)
+df_long.to_sql('Biography', 'sqlite:///streamlit_db.db', if_exists='replace', index=False)
 
 # total = df_long['professor'].nunique()
 

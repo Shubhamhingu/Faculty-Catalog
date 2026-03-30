@@ -1,9 +1,9 @@
 import pandas as pd
 import re
 
-df = pd.read_excel("1934 Teachers.xlsx", sheet_name='By Subject', header=2)
+df = pd.read_excel("1934 Teachers.xlsx", sheet_name='General', header=1)
 df.drop('ID', axis=1, inplace=True)  # Remove the 'ID' column if it exists
-
+df.rename(columns={'First Name': 'First_Name', 'Last Name': 'Last_Name'}, inplace=True)
 # -----------------------------
 # Step 1: Clean faculty name
 # -----------------------------
@@ -22,7 +22,12 @@ def clean_name(name):
         return f"{rest} {last}"
     return name.strip()
 
-df['professor_key'] = df['Faculty Name'].apply(clean_name)
+df['professor_key'] = (
+    df['First_Name'].fillna('') + ' ' +
+    df['MI'].fillna('') + ' ' +
+    df['Last_Name'].fillna('')
+).str.replace(r'\s+', ' ', regex=True).str.strip()
+df['professor_key'] = df['professor_key'].apply(clean_name)
 
 # -----------------------------
 # Step 2: Extract subject + experience
@@ -62,5 +67,5 @@ df_exploded['experience'] = df_exploded['parsed'].apply(lambda x: x['experience'
 # -----------------------------
 final_df = df_exploded[['professor_key', 'subject', 'experience']].dropna()
 
-final_df.to_sql('Subject', 'sqlite:///clean_teachers_1934_new.db', if_exists='replace', index=False)
+final_df.to_sql('Subject', 'sqlite:///streamlit_db.db', if_exists='replace', index=False)
 # print(final_df.head())

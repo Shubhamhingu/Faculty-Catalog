@@ -26,4 +26,4 @@ df['professor_key'] = (
 ).str.replace(r'\s+', ' ', regex=True).str.strip()
 df['professor_key'] = df['professor_key'].apply(clean_name)
 
-df.to_sql('School', 'sqlite:///clean_teachers_1934_new.db', if_exists='replace', index=False)
+df.to_sql('School', 'sqlite:///streamlit_db.db', if_exists='replace', index=False)

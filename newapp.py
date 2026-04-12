@@ -29,59 +29,92 @@ choice = st.sidebar.radio(
     ]
 )
 
-# --- MODULE 1: TRANSITION ANALYSIS (The "Gap" Finder) ---
+# --- MODULE 1: TRANSITION ANALYSIS (The Full Research Lifecycle) ---
 if choice == "Transition Analysis (Movers/Stayers)":
     st.header("🔄 Faculty Career Transitions")
-    st.info("This module identifies who stayed at their school, who moved, and who left the academy.")
+    st.markdown("""
+        This module compares two snapshots to identify the 'Gaps' Professor Morriss mentioned. 
+        It categorizes every faculty member to prioritize manual research.
+    """)
     
-    # Get available years for comparison
+    # 1. GET SNAPSHOT YEARS
     years_df = run_query("SELECT DISTINCT SOURCE_YEAR FROM BIOGRAPHY")
     years = sorted(years_df['SOURCE_YEAR'].unique().tolist())
     
     if len(years) >= 2:
-        col1, col2 = st.columns(2)
-        y1 = col1.selectbox("Start Year (Snapshot A)", years, index=0)
-        y2 = col2.selectbox("End Year (Snapshot B)", years, index=1)
+        c1, c2 = st.columns(2)
+        y1 = c1.selectbox("Start Year (Snapshot A)", years, index=0)
+        y2 = c2.selectbox("End Year (Snapshot B)", years, index=1)
         
-        if st.button("Generate Transition Report"):
-            # logic to compare two years via FULL OUTER JOIN logic
-            query = f"""
-            SELECT 
-                COALESCE(a.FINGERPRINT, b.FINGERPRINT) as FINGERPRINT,
-                COALESCE(a."FIRST NAME", b."FIRST NAME") as "FIRST NAME",
-                COALESCE(a."MI", b."MI") as "MI",
-                COALESCE(a."LAST NAME", b."LAST NAME") as "LAST NAME",
-                a.SCHOOL as SCHOOL_START,
-                b.SCHOOL as SCHOOL_END
-            FROM (SELECT * FROM BIOGRAPHY WHERE SOURCE_YEAR = '{y1}') a
-            FULL OUTER JOIN (SELECT * FROM BIOGRAPHY WHERE SOURCE_YEAR = '{y2}') b 
-                ON a.FINGERPRINT = b.FINGERPRINT
-            """
-            # Note: SQLite doesn't support FULL OUTER JOIN directly, 
-            # in practice you'd use a UNION of LEFT and RIGHT joins here.
-            df = run_query(query) 
+        if st.button("Run Full Comparison"):
+            # Using the Full Outer Join logic via PIVOT_TABLE for accuracy
+            query = f'SELECT FINGERPRINT, SCHOOL, SOURCE_YEAR, "LAST NAME" FROM BIOGRAPHY WHERE SOURCE_YEAR IN ("{y1}", "{y2}")'
+            raw_data = run_query(query)
             
-            def identify_status(row):
-                if pd.notnull(row['SCHOOL_START']) and pd.notnull(row['SCHOOL_END']):
-                    return "Stayer" if row['SCHOOL_START'] == row['SCHOOL_END'] else "Mover"
-                return "Leaver" if pd.notnull(row['SCHOOL_START']) else "Newcomer"
+            # Pivot to compare the two years side-by-side
+            pivot = raw_data.pivot_table(
+                index=['FINGERPRINT', 'LAST NAME'], 
+                columns='SOURCE_YEAR', 
+                values='SCHOOL',
+                aggfunc='first'
+            ).reset_index()
 
-            df['STATUS'] = df.apply(identify_status, axis=1)
+            # Define Statuses based on the Professor's specific categories
+            def get_transition_status(row):
+                if pd.notnull(row[y1]) and pd.notnull(row[y2]):
+                    return "Stayer" if row[y1] == row[y2] else "Mover"
+                elif pd.notnull(row[y1]) and pd.isna(row[y2]):
+                    return "Leaver"
+                elif pd.isna(row[y1]) and pd.notnull(row[y2]):
+                    return "Newcomer"
             
-            # Metrics
+            pivot['STATUS'] = pivot.apply(get_transition_status, axis=1)
+
+            # 2. DISPLAY METRICS
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Stayers", len(df[df['STATUS']=='Stayer']))
-            m2.metric("Movers", len(df[df['STATUS']=='Mover']))
-            m3.metric("Leavers", len(df[df['STATUS']=='Leaver']))
-            m4.metric("Newcomers", len(df[df['STATUS']=='Newcomer']))
-            
-            st.subheader("📍 Movers Requiring Manual Check")
-            st.dataframe(df[df['STATUS']=='Mover'], width='stretch')
-            
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Research List for R", csv, "transitions.csv", "text/csv")
+            m1.metric("Stayers (Auto-Fill)", len(pivot[pivot['STATUS'] == 'Stayer']))
+            m2.metric("Movers (Check Move Year)", len(pivot[pivot['STATUS'] == 'Mover']))
+            m3.metric("Leavers (Check Exit)", len(pivot[pivot['STATUS'] == 'Leaver']))
+            m4.metric("Newcomers (Check Entry)", len(pivot[pivot['STATUS'] == 'Newcomer']))
+
+            # 3. RESEARCH TABS
+            tab_movers, tab_gap_analysis, tab_stayers = st.tabs([
+                "📍 Movers (Action Required)", 
+                "🕵️ Leavers & Newcomers", 
+                "✅ Stayers (Interpolated)"
+            ])
+
+            with tab_movers:
+                st.subheader("Faculty who changed schools")
+                st.info(f"Professor's Task: Identify which specific year between {y1} and {y2} the move occurred.")
+                st.dataframe(pivot[pivot['STATUS'] == 'Mover'])
+                
+            with tab_gap_analysis:
+                st.subheader("Faculty Entries and Exits")
+                col_left, col_right = st.columns(2)
+                with col_left:
+                    st.write(f"**Leavers (Left after {y1})**")
+                    st.dataframe(pivot[pivot['STATUS'] == 'Leaver'][['FINGERPRINT', 'LAST NAME', y1]])
+                with col_right:
+                    st.write(f"**Newcomers (Joined before {y2})**")
+                    st.dataframe(pivot[pivot['STATUS'] == 'Newcomer'][['FINGERPRINT', 'LAST NAME', y2]])
+
+            with tab_stayers:
+                st.subheader("Stable Faculty")
+                st.success(f"These professors remained at the same school. We can safely interpolate data for the years between {y1} and {y2}.")
+                st.dataframe(pivot[pivot['STATUS'] == 'Stayer'])
+
+            # 4. DOWNLOAD FOR R
+            st.divider()
+            csv = pivot.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Full Transition Report for R",
+                data=csv,
+                file_name=f"transition_{y1}_to_{y2}.csv",
+                mime='text/csv'
+            )
     else:
-        st.warning("Please upload data for at least two years to analyze transitions.")
+        st.warning("Analysis requires data for at least two different years.")
 
 # --- MODULE 2: R DATA EXPORT HUB (The "Flat File" Generator) ---
 elif choice == "R Data Export Hub":

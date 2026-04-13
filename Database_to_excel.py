@@ -20,4 +20,4 @@ def export_db_to_excel(db_path, output_excel_path):
     conn.close()
 
 # Usage
-export_db_to_excel('streamlit_db.db', 'catalog.xlsx')
+export_db_to_excel('consol.db', 'catalog.xlsx')

@@ -48,12 +48,12 @@ if choice == "Transition Analysis (Movers/Stayers)":
         
         if st.button("Run Full Comparison"):
             # Using the Full Outer Join logic via PIVOT_TABLE for accuracy
-            query = f'SELECT FINGERPRINT, SCHOOL, SOURCE_YEAR, "LAST NAME" FROM BIOGRAPHY WHERE SOURCE_YEAR IN ("{y1}", "{y2}")'
+            query = f'SELECT FINGERPRINT, SCHOOL, SOURCE_YEAR, "FIRST NAME", "MI", "LAST NAME" FROM BIOGRAPHY WHERE SOURCE_YEAR IN ("{y1}", "{y2}")'
             raw_data = run_query(query)
             
             # Pivot to compare the two years side-by-side
             pivot = raw_data.pivot_table(
-                index=['FINGERPRINT', 'LAST NAME'], 
+                index=['FINGERPRINT','FIRST NAME', 'MI', 'LAST NAME'], 
                 columns='SOURCE_YEAR', 
                 values='SCHOOL',
                 aggfunc='first'
@@ -94,10 +94,10 @@ if choice == "Transition Analysis (Movers/Stayers)":
                 col_left, col_right = st.columns(2)
                 with col_left:
                     st.write(f"**Leavers (Left after {y1})**")
-                    st.dataframe(pivot[pivot['STATUS'] == 'Leaver'][['FINGERPRINT', 'LAST NAME', y1]])
+                    st.dataframe(pivot[pivot['STATUS'] == 'Leaver'][['FINGERPRINT','FIRST NAME', 'MI', 'LAST NAME', y1]])
                 with col_right:
                     st.write(f"**Newcomers (Joined before {y2})**")
-                    st.dataframe(pivot[pivot['STATUS'] == 'Newcomer'][['FINGERPRINT', 'LAST NAME', y2]])
+                    st.dataframe(pivot[pivot['STATUS'] == 'Newcomer'][['FINGERPRINT', 'FIRST NAME', 'MI', 'LAST NAME', y2]])
 
             with tab_stayers:
                 st.subheader("Stable Faculty")

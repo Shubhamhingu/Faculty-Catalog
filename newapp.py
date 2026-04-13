@@ -122,7 +122,7 @@ elif choice == "R Data Export Hub":
     st.markdown("Select your variables to create a 'General' style flat file.")
     
     # Selection of variables as requested in the email
-    all_vars = ['FINGERPRINT', 'SOURCE_YEAR', 'FIRST_NAME', 'LAST NAME', 'SCHOOL', 'RANK', 'COURSE_COMBINED', 'EDU_COMBINED']
+    all_vars = ['FINGERPRINT', 'SOURCE_YEAR', 'FIRST NAME', 'MI', 'LAST NAME', 'SCHOOL', 'RANK', 'DEAN_YN', 'TITLE', 'YEAR OF BIRTH','COURSE_COMBINED', 'EDU_COMBINED']
     selected_vars = st.multiselect("Variables to include", all_vars, default=['FINGERPRINT', 'SOURCE_YEAR', 'SCHOOL', 'RANK'])
     
     include_phd = st.checkbox("Include PhD Binary Flag (Y/N)", value=True)
